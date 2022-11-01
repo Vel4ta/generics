@@ -67,88 +67,85 @@ fn maxi(a: i32, b: i32) -> i32 {
     }
 }
 
-
-// pub fn max_length(arr: Vec<String>) -> i32 {
-//     let l = arr.len();
-//     let mut results: Vec<i32> = vec![0; l * l];
-//     results[0] = arr[0].len() as i32;
-
-//     let (mut i, mut j): (usize, usize) = (0, 1);
-//     while i < l {
-//         while j <= l {
-//             if i > j {
-//                 results[i * l + j.abs_diff(1)] = maxi(results[j.abs_diff(1) * l + i], results[j.abs_diff(1) * l + i]);
-//             } else if i == j {
-//                 results[i * l + j.abs_diff(1)] = maxi(arr[j].len() as i32, results[j.abs_diff(1) * l + i]);
-//             } else {
-//                 results[i * l + j.abs_diff(1)] = maxi(results[i * l + j.abs_diff(1)], count(&*arr[i], &*arr[j.abs_diff(1)]));
-//             }
-//             j += 1;
-//         }
-//         j = 1;
-//         i += 1;
-//     }
-//     results[l.abs_diff(1) * l.abs_diff(1) + l.abs_diff(1)]
-// }
-
 pub fn max_length(arr: Vec<String>) -> i32 {
-    let l = arr.len();
-    let mut results: Vec<i32> = vec![0; l * l];
+    // max of length without arr[0] and with arr[0]
+    maxi(arr[0].len() as i32, max_length_helper((&arr, 0, 1, arr.len(), String::new())))
+}
 
+pub fn max_length_iter(arr: Vec<String>) -> i32 {
+    let l: usize = arr.len().abs_diff(1);
     let mut m: i32 = 0;
-    let (mut i, mut j): (usize, usize) = (0, 0);
-    while i < l {
-        let mut c: i32 = 0;
-        while j < l {
-            if i == j {
-                c += arr[j].len() as i32;
-                results[i * l + j] = arr[j].len() as i32;
+    let mut stack: Vec<(usize, usize, String)> = Vec::with_capacity(l + 1);
+    stack.push((0, 1, String::new()));
+    while let Some((i, j, acc)) = stack.pop() {
+        if i < l {
+            if j < l {
+                stack.push((i, j + 1, String::new() + &acc));
+                stack.push((i, j + 1, String::new() + &acc + &*arr[j]));
             } else {
-                let ct = count(&*arr[i], &*arr[j]);
-                results[i * l + j] = ct;
-                c += ct;
-                if ct > 0 {
-                    let mut done: bool = false;
-                    let mut k: usize = j + 1;
-                    let mut c2: i32 = 0;
-                    while !done {
-                        if k < l {
-                            results[j * l + k] = count(&*arr[j], &*arr[k]);
-                            results[i * l + k] = count(&*arr[i], &*arr[k]);
-
-                            if results[j * l + k] > 0 && results[i * l + k] > 0 {
-                                c2 += results[j * l + k];
-                                j = k;
-                                k += 1;
-                            }  else {
-                                m = maxi(m, c + c2);
-                                done = true;
-                            }
-                        } else {
-                            m = maxi(m, c + c2);
-                            done = true;
-                        }
-                    }
-                    
-                    j = k;
-                }
+                m = maxi(
+                    m,
+                    maxi(
+                        maxi(
+                            count(&*arr[i], &acc),
+                            count(&*arr[i], &*arr[j])
+                        ),
+                        maxi(
+                            maxi(
+                                count("", &acc),
+                                count(&*arr[j], &acc)
+                            ),
+                            count(&*arr[i], &(acc + &*arr[j]))
+                        )
+                    )
+                );
             }
-            j += 1;
+        } else {
+            m = maxi(m, arr[i].len() as i32);
         }
-        println!("{c}");
-        m = maxi(m, c);
-        i += 1;
-        j = i;
     }
-    println!("{:?}", results);
     m
+}
+
+pub fn max_length_helper((arr, i, j, l, accum): (&Vec<String>, usize, usize, usize, String)) -> i32 {
+    if i < l.abs_diff(1) {
+        if j < l.abs_diff(1) {
+            // max of length without j and length with j
+            maxi(
+                max_length_helper((arr, i, j + 1, l, String::new() + &accum)),
+                max_length_helper((arr, i, j + 1, l, String::new() + &accum + &*arr[j]))
+            )
+        } else {
+            // max of
+            maxi(
+                // max of arr[i] with accum and arr[i] with arr[j]
+                maxi(
+                    count(&*arr[i], &accum),
+                    count(&*arr[i], &*arr[j])
+                ),
+                // and max of
+                maxi(
+                    // max of accum without arr[j] and accum with arr[j]
+                    maxi(
+                        count("", &accum),
+                        count(&accum, &*arr[j])
+                    ),
+                    // and arr[i] with accum with arr[j]
+                    count(&*arr[i], &(accum + &arr[j]))
+                )
+            )
+        }
+    } else {
+        // i = l - 1 = 0
+        arr[i].len() as i32
+    }
 }
 
 fn count(a: &str, b: &str) -> i32 {
     let (x, y): (usize, usize) = (a.len(), b.len());
     let h: HashSet<char> = HashSet::from_iter((a.to_string() + b).chars());
     if h.len() == x + y {
-        y as i32
+        h.len() as i32
     } else {
         0
     }
@@ -172,7 +169,27 @@ mod tests {
 
     #[test]
     fn max_length_test() {
-        let result: i32 = max_length(Vec::from(["fc".to_string(), "cbd".to_string(), "zx".to_string(), "abu".to_string(), "e".to_string(), "efgu".to_string()]));
-        assert_eq!(result, 0);
+        // let result: i32 = max_length(Vec::from([
+        //     "ta".to_string(),
+        //     // "cdefghijklmnopqrstuv".to_string(),
+        //     "tuv".to_string(),
+        //     "au".to_string(),
+        //     "be".to_string(),
+        //     // "zxv".to_string(),
+        // ]));
+        let result: i32 = max_length_iter(Vec::from([
+            "fc".to_string(),
+            "abu".to_string(),
+            "zx".to_string(),
+            "cbd".to_string(),
+            "efgu".to_string(),
+            "ety".to_string(),
+            "fe".to_string(),
+        ]));
+        // let result: i32 = max_length(Vec::from(["abu".to_string(), "cbd".to_string(), "d".to_string()]));
+        // let result: i32 = max_length(Vec::from(["c".to_string(), "abu".to_string()]));
+        // let result: i32 = max_length(Vec::from(["a".to_string(), "c".to_string(), "b".to_string(), "d".to_string(), "abc".to_string(), ]));
+        // assert_eq!(result, 0);
+        assert_eq!(result, 10);
     }
 }
