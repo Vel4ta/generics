@@ -325,14 +325,14 @@ pub fn get_maximum_gold(grid: Vec<Vec<i32>>) -> i32 {
             let mut si = stack_index + 1;
             while si < stack_len {
                 let (a3, b3, a4, b4, t) = stack[i][si];
-                if a2 == a3 && b3 == b1 && b4 == b2 {
+                if a2 == a3 && b3 == b1 && b4 >= b2 {
                     let (sum, _) = partioned_sums(&grid[a2], b3, b4, b4);
                     let path = (a1, b1, a4, b4, w + t - sum);
                     if max_gold < path.4 {
                         max_gold = path.4;
                     }
                     println!("found {:?}", path);
-                    // stack[i].push(path);
+                    stack[i].push(path);
                 }
                 si += 1;
             }
