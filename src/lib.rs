@@ -214,98 +214,121 @@ pub fn get_maximum_gold(grid: Vec<Vec<i32>>) -> i32 {
                     stack[i].push((i, j, i, k_1, w));
                 }
                 if i_1 < i {
+                    let (mut x1, mut y1, mut x2, mut y2, mut tot) = (i, j, i, k_1, w);
                     let stack_len: usize = stack[i_1].len();
                     let mut stack_index: usize = 0;
-                    let mut included: bool = false;
                     while stack_index < stack_len {
                         let (a1, b1, a2, b2, t) = stack[i_1][stack_index];
                         println!("comparing {:?}", (a1, b1, a2, b2, t));
                         stack_index += 1;
-                        let path: (usize, usize, usize, usize, i32);
-
 
                         //   a    b
                         // c    d
-                        if b1 < j && b2 < k_1 {
+                        if b1 < y1 && b2 < y2 {
 
-                        } else if b1 < j && b2 == k_1 {
+                        } else if b1 < y1 && b2 == y2 {
                             
-                        } else if b1 < j && b2 > k_1 {
-
-                        } else if b1 == j && b2 == k_1 {
-                            path = (a1, b1, i, k_1, w + t);
-
-                            if max_gold < path.4 {
-                                max_gold = path.4;
+                        } else if b1 < y1 && b2 > y2 {
+                            //    y1    y2
+                            // b1          b2
+                            let d: usize = dist(y1, y2);
+                            if d == 0 || d^1 < d {
+                                let mut left: i32 = 0;
+                                let mut right: i32 = 0;
+                                let mut si: usize = 0;
+                                while si < i_1 {
+                                    let sil = stack[si].len();
+                                    let mut si_i: usize = 0;
+                                    while si_i < sil {
+                                        if stack[si][si_i].1 == b1 {
+                                            left = stack[si][si_i].4;
+                                        } else if stack[si][si_i].3 == b2 {
+                                            right = stack[si][si_i].4;
+                                        }
+                                        si_i += 1;
+                                    }
+                                    si += 1;
+                                }
+                                left += partioned_sums(&grid[i_1], b1, b2, b2).0;
+                                right += partioned_sums(&grid[i_1], y1, b2, b2).0;
+                            } else {
+                                tot += t;
                             }
-                            println!("inserting {:?}", path);
-                            stack[i].push(path);
-
-                        } else if b1 == j && b2 > k_1 {
-                            let d: usize = dist(j, k_1);
-                            path = if d == 0 || d^1 < d {
-                                let right = partioned_sums(&grid[i_1], j, b2, b2).0 - grid[i_1][j];
-                                if a1 < i_1 && t - right - grid[i_1][j] > right {
-                                    (a1, b1, i, k_1, t - right + w)
+                            println!("updated path {:?}", (x1, y1, x2, y2, tot));
+                        } else if b1 == y1 && b2 == y2 {
+                            x1 = a1;
+                            y1 = b1;
+                            tot += t;
+                            println!("updated path {:?}", (x1, y1, x2, y2, tot));
+                        } else if b1 == y1 && b2 > y2 {
+                            let d: usize = dist(y1, y2);
+                            if d == 0 || d^1 < d {
+                                let right = partioned_sums(&grid[i_1], y1, b2, b2).0 - grid[i_1][y1];
+                                if a1 < i_1 && tot - right - grid[i_1][y1] > right {
+                                    x1 = a1;
+                                    y1 = b1;
+                                    tot = t - right + tot;
                                 } else {
-                                    (i, j, a2, b2, right + grid[i_1][j] + w)
+                                    x2 = a2;
+                                    y2 = b2;
+                                    tot = right + grid[i_1][y1] + tot;
                                 }
                             } else {
-                                (a1, b1, i, k_1, w + t)
-                            };
-
-                            if max_gold < path.4 {
-                                max_gold = path.4;
+                                x1 = a1;
+                                y1 = b1;
+                                tot += t;
                             }
-                            println!("inserting {:?}", path);
-                            stack[i].push(path);
-                        } else if b1 == j && b2 < k_1 {
-                            let path = (a1, b1, i, k_1, w + t);
-                            if max_gold < path.4 {
-                                max_gold = path.4;
-                            }
-                            println!("inserting {:?}", path);
-                            stack[i].push(path);
-                        } else if b1 > j && b2 < k_1 {
+                            println!("updated path {:?}", (x1, y1, x2, y2, tot));
+                        } else if b1 == y1 && b2 < y2 {
+                            x1 = a1;
+                            y1 = b1;
+                            tot += t;
+                            println!("updated path {:?}", (x1, y1, x2, y2, tot));
+                        } else if b1 > y1 && b2 < y2 {
                             let d: usize = dist(b1, b2);
-                            path = if d == 0 || d^1 < d {
-                                let left = partioned_sums(&grid[i], j, b1, b1).0 - grid[i][b1];
-                                let right = partioned_sums(&grid[i], b2, k_1, k_1).0 - grid[i][b2];
+                            if d == 0 || d^1 < d {
+                                let left = partioned_sums(&grid[i], y1, b1, b1).0 - grid[i][b1];
+                                let right = partioned_sums(&grid[i], b2, y2, y2).0 - grid[i][b2];
                                 if left < right {
                                     // right
                                     //    b1   b2
                                     // j          k_1
-                                    (a1, b1, i, k_1, w - left + t)
+                                    x1 = a1;
+                                    y1 = b1;
+                                    tot = tot - left + t;
                                 } else {
                                     // left
                                     //   b1   b2
                                     // j         k_1
-                                    (i, j, a2, b2, w - right + t)
+                                    x2 = a2;
+                                    y2 = b2;
+                                    tot = tot - right + t;
                                 }
                             } else {
-                                (i, j, i, k_1, w + t)
-                            };
-
-                            if max_gold < path.4 {
-                                max_gold = path.4;
+                                tot += t;
                             }
-                            println!("inserting {:?}", path);
-                            stack[i].push(path);
-                        } else if b1 > j && b2 == k_1 {
-                            let path = 
+                            println!("updated path {:?}", (x1, y1, x2, y2, tot));
+                        } else if b1 > y1 && b2 == y2 {
                             if a1 < i_1 {
-                                (i, j, a1, b1, w + t)
+                                x2 = a1;
+                                y2 = b1;
+                                tot += t;
                             } else {
-                                (i, j, a2, b2, w + t)
-                            };
-                            if max_gold < path.4 {
-                                max_gold = path.4;
+                                x2 = a2;
+                                y2 = b2;
+                                tot += t;
                             }
-                            println!("inserting {:?}", path);
-                            stack[i].push(path);
-                        } else if b1 > j && b2 > k_1 {
+                            println!("updated path {:?}", (x1, y1, x2, y2, tot));
+                        } else if b1 > y1 && b2 > y2 {
                         } 
                     }
+
+                    let path: (usize, usize, usize, usize, i32) = (x1, y1, x2, y2, tot);
+                    if max_gold < path.4 {
+                        max_gold = path.4;
+                    }
+                    println!("6inserting {:?}", path);
+                    stack[i].push(path);
                 }
             }
 
@@ -317,263 +340,11 @@ pub fn get_maximum_gold(grid: Vec<Vec<i32>>) -> i32 {
             }
         }
 
-        let stack_len: usize = stack[i].len();
-        let mut stack_index: usize = 0;
-
-        while stack_index < stack_len {
-            let (a1, b1, a2, b2, w) = stack[i][stack_index];
-            let mut si = stack_index + 1;
-            while si < stack_len {
-                let (a3, b3, a4, b4, t) = stack[i][si];
-                if a2 == a3 && b3 == b1 && b4 == b2 {
-                    let (sum, _) = partioned_sums(&grid[a2], b3, b4, b4);
-                    let path = (a1, b1, a4, b4, w + t - sum);
-                    if max_gold < path.4 {
-                        max_gold = path.4;
-                    }
-                    println!("found {:?}", path);
-                    stack[i].push(path);
-                }
-                si += 1;
-            }
-            stack_index += 1;
-        }
-
         println!("-------");
         i_1 = i;
         i += 1;
         j = 0;
     }
-    //                 while stack_index < stack_len {
-    //                     let (a1, b1, a2, b2, t) = stack[i_1][stack_index];
-    //                     println!("comparing {:?}", (a1, b1, a2, b2, t));
-    //                     stack_index += 1;
-
-
-    //                     if b1 >= j && b2 <= k_1 {
-    //                         // let path: (usize, usize, usize, usize, i32);
-    //                         if a1 == a2 && b1 == b2 {
-    //                             let (sum1, sum2): (i32, i32) = partioned_sums(&grid[i], j, b2, k_1);
-    //                             let total: i32 = sum1 + sum2 - grid[i][b2];
-    //                             let path:
-    //                                 (usize, usize, usize, usize, i32) =
-    //                                 if t + sum2 >= total || sum1 < sum2 {
-    //                                 // if sum1 < sum2 {
-    //                                     (a1, b1, i, k_1, t + sum2)
-    //                                 } else if t + sum1 >= total || sum1 >= sum2 {
-    //                                 // } else if sum1 >= sum2 {
-    //                                     (i, j, a1, b1, t + sum1)
-    //                                 } else {
-    //                                     (a1, b1, i, k_1, w + t)
-    //                                 };
-    //                             println!("inserting& {:?}", path);
-    //                             if max_gold < path.4 {
-    //                                 max_gold = path.4;
-    //                             }
-    //                             stack[i].push(path);
-    //                             included = true;
-    //                         } else if a2 == i_1 && b1 == j && grid[i_1][j] > 0 {
-    //                             println!("inserting {:?}", (a1, b1, i, k_1, w + t));
-    //                             if max_gold < w + t {
-    //                                 max_gold = w + t;
-    //                             }
-    //                             stack[i].push((a1, b1, i, k_1, w + t));
-    //                             included = true;
-    //                         } else if a2 == i_1 && b1 > j && b1 == b2 {
-    //                             let sums: (i32, i32) = partioned_sums(&grid[i], j, b2, k_1);
-    //                             let path: (usize, usize, usize, usize, i32) = 
-    //                                 if w + sums.0 >= t {
-    //                                     (i, j, a1, b1, t + sums.0)
-    //                                 } else {
-    //                                     (a1, b1, i, k_1, t + sums.1)
-    //                                 };
-    //                             println!("inserting {:?}", path);
-    //                             if max_gold < path.4 {
-    //                                 max_gold = path.4;
-    //                             }
-    //                             stack[i].push(path);
-    //                             included = true;
-    //                         } else if a1 < i_1 {
-    //                             let sums: (i32, i32) = partioned_sums(&grid[i_1], j, b2, b2);
-    //                             let (sum1, sum2): (i32, i32) = (t - sums.0, sums.0);
-    //                             let path:
-    //                                 (usize, usize, usize, usize, i32) =
-    //                                 if sum1 >= sum2 {
-    //                                     (a1, b1, i, k_1, w + sum1 + grid[i_1][j])
-    //                                 } else {
-    //                                     if a1 < i_1 {
-    //                                         (i, j, a1, b1, w + sum2)
-    //                                     } else {
-    //                                         (i, j, a2, b2, w + sum2)
-    //                                     }
-    //                                 };
-    //                             println!("{sum1} {sum2}");
-    //                             println!("inserting {:?}", path);
-    //                             if max_gold < path.4 {
-    //                                 max_gold = path.4;
-    //                             }
-    //                             stack[i].push(path);
-    //                             included = true;
-    //                         } else if a1 == i_1 {
-    //                             let path:
-    //                                 (usize, usize, usize, usize, i32) =
-    //                                     (i, j, a2, b2, w + t);
-                                
-    //                             println!("inserting* {:?}", path);
-    //                             if max_gold < path.4 {
-    //                                 max_gold = path.4;
-    //                             }
-    //                             stack[i].push(path);
-    //                         }
-    //                         println!("what else");
-    //                     } else if j >= b1 && k_1 <= b2 {
-    //                         if j == k_1 {
-    //                             let (sum1, sum2): (i32, i32);
-    //                             let sums: (i32, i32);
-
-    //                             if a1 < i_1 && grid[a2][b1] > 0 {
-    //                                 sums = partioned_sums(&grid[i_1], k_1, b2, b2);
-    //                                 sum1 = t - sums.0;
-    //                                 sum2 = sums.0 - grid[i_1][k_1];
-    //                                 // sum2 = sums.0;
-    //                             } else if a2 < i_1 && grid[a1][j] > 0 {
-    //                                 println!("do I need to split?");
-    //                                 if b1 < j {
-    //                                     sums = partioned_sums(&grid[i_1], b1, k_1, b2);
-    //                                     sum2 = t - sums.0;
-    //                                     sum1 = sums.0 - grid[i_1][k_1];
-    //                                     // sum1 = sums.0;
-    //                                 } else {
-    //                                     sum1 = 0;
-    //                                     sum2 = t - grid[i_1][k_1];
-    //                                     // sum2 = t;
-    //                                 }
-    //                             } else {
-    //                                 sums = partioned_sums(&grid[a1], b1, k_1, b2);
-    //                                 sum1 = sums.0 - grid[i_1][k_1];
-    //                                 // sum1 = sums.0;
-    //                                 sum2 = sums.1 - grid[i_1][k_1];
-    //                                 // sum2 = sums.1;
-    //                             }
-    //                             let total: i32 = sum1 + sum2;
-    //                             let path:
-    //                                 (usize, usize, usize, usize, i32) =
-    //                                 // if sum1 < sum2 {
-    //                                 //     // (i, j, a2, b2, w + sum2 + grid[i_1][k_1])
-    //                                 //     (i, j, a2, b2, w + sum2)
-    //                                 // } else {
-    //                                 //     // (a1, b1, i, j, w + sum1 + grid[i_1][k_1])
-    //                                 //     (a1, b1, i, j, w + sum1)
-    //                                 // };
-    //                                 if w + sum2 > total || sum1 < sum2 {
-    //                                 // if sum1 < sum2 {
-    //                                     (i, j, a2, b2, w + sum2 + grid[i_1][k_1])
-    //                                 } else if w + sum1 >= total || sum1 >= sum2 {
-    //                                 // } else if sum1 >= sum2 {
-    //                                     (a1, b1, i, j, w + sum1 + grid[i_1][k_1])
-    //                                 } else {
-    //                                     (a1, b1, i, k_1, w + t)
-    //                                 };
-
-    //                             println!("{sum1} {sum2}");
-    //                             println!("inserting {:?}", path);
-    //                             if max_gold < path.4 {
-    //                                 max_gold = path.4;
-    //                             }
-    //                             stack[i].push(path);
-    //                             included = true;
-    //                         // } else if a1 <= i_1 {
-    //                         } else if a1 < i_1 {
-    //                             let sums: (i32, i32) = partioned_sums(&grid[i_1], j, b2, b2);
-    //                             let (sum1, sum2): (i32, i32) = (t - sums.0, sums.0);
-    //                             let path:
-    //                                 (usize, usize, usize, usize, i32) =
-    //                                 if sum1 >= sum2 {
-    //                                     (a1, b1, i, k_1, w + sum1 + grid[i_1][j])
-    //                                 } else {
-    //                                     (i, j, a2, b2, w + sum2)
-    //                                 };
-    //                             println!("{sum1} {sum2}");
-    //                             println!("inserting {:?}", path);
-    //                             if max_gold < path.4 {
-    //                                 max_gold = path.4;
-    //                             }
-    //                             stack[i].push(path);
-    //                             included = true;
-    //                         } else if a1 == i_1 {
-    //                             let path:
-    //                                 (usize, usize, usize, usize, i32) =
-    //                                     (i, j, a2, b2, w + t);
-                                
-    //                             println!("inserting* {:?}", path);
-    //                             if max_gold < path.4 {
-    //                                 max_gold = path.4;
-    //                             }
-    //                             stack[i].push(path);
-    //                         }
-    //                     }
-    //                 }
-
-    //                 if !included {
-    //                     println!("inserting {:?}", (i, j, i, k_1, w));
-    //                     stack[i].push((i, j, i, k_1, w));
-    //                 }
-    //             }
-    //         }
-    //         if k == j {
-    //             j_1 = j;
-    //             j += 1;
-    //         } else {
-    //             j = k;
-    //         }
-    //     }
-
-    //     // let mut sl = stack[i].len();
-    //     // let mut stack_index = 0;
-    //     // while stack_index < sl {
-    //     //     let (a1, b1, a2, b2, t) = stack[i][stack_index];
-    //     //     println!("current path: {:?}", (a1, b1, a2, b2, t));
-    //     //     // if max_gold < t {
-    //     //     //     max_gold = t;
-    //     //     // }
-    //     //     for index in (stack_index + 1)..sl {
-    //     //         let (a3, b3, a4, b4, w): (usize, usize, usize, usize, i32) = stack[i][index];
-    //     //         println!("comparing: {:?}", (a3, b3, a4, b4, w));
-    //     //         if a1 == a4 && b2 == b4 && a3 == i_1 && b3 == b1 && a2 < a3 {
-
-    //     //             // check path parts from previous rows in stack
-
-    //     //             let (sum2, _): (i32, i32) = partioned_sums(&grid[a1], b2, b4, b4);
-    //     //             let sum1: i32 = t - sum2;
-    //     //             println!("{sum1} {sum2}");
-    //     //             let path = (a3, b3, a4, b4, w + sum1);
-    //     //             println!("inserting***: {:?}", path);
-    //     //             if max_gold < w + sum1 {
-    //     //                 max_gold = w + sum1;
-    //     //             }
-    //     //             // stack[i].push(path);
-    //     //             // sl += 1;
-    //     //         } else
-    //     //         if b3 == b1 && b2 == b4 && a2 == a3 && a4 == a1 {
-    //     //             let (sum1, _) = partioned_sums(&grid[a3], b3, b2, b2);
-    //     //             let total = w + t - sum1;
-    //     //             if max_gold < total {
-    //     //                 max_gold = total;
-    //     //             }
-    //     //             let path = (a1, b1, a4, b4, total);
-    //     //             println!("inserting**: {:?}", path);
-    //     //             stack[i].push(path);
-    //     //             // sl += 1;
-    //     //         }
-    //     //     }
-    //     //     stack_index += 1;
-    //     // }
-
-    //     println!("-------");
-    //     i_1 = i;
-    //     i += 1;
-    //     j = 0;
-    // }
 
     max_gold
 }
@@ -602,24 +373,24 @@ mod tests {
         //     Vec::from([5,8,7]),
         //     Vec::from([0,9,0])
         //     ]));
-        // let result = get_maximum_gold(
-        //     [
-        //         [1,0,7],
-        //         [2,0,6],
-        //         [3,4,5],
-        //         [0,3,0],
-        //         [9,0,20]
-        //     ].iter_mut().map(|x| x.to_vec()).collect::<Vec<Vec<i32>>>());
-        let result = get_maximum_gold([
-            [1,0,7,0,0,0],
-            [2,0,6,0,1,0],
-            [3,5,6,7,4,2],
-            [4,3,1,0,2,0],
-            [3,0,5,0,20,0]
-        ].iter_mut().map(|x| x.to_vec()).collect::<Vec<Vec<i32>>>());
-        assert_eq!(result, 60);
+        let result = get_maximum_gold(
+            [
+                [1,0,7],
+                [2,0,6],
+                [3,4,5],
+                [0,3,0],
+                [9,0,20]
+            ].iter_mut().map(|x| x.to_vec()).collect::<Vec<Vec<i32>>>());
+        // let result = get_maximum_gold([
+        //     [1,0,7,0,0,0],
+        //     [2,0,6,0,1,0],
+        //     [3,5,6,7,4,2],
+        //     [4,3,1,0,2,0],
+        //     [3,0,5,0,20,0]
+        // ].iter_mut().map(|x| x.to_vec()).collect::<Vec<Vec<i32>>>());
+        // assert_eq!(result, 60);
         // assert_eq!(result1, 24);
-        // assert_eq!(result, 28);
+        assert_eq!(result, 218);
     }
 
     #[test]
