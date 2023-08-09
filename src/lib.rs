@@ -1,11 +1,12 @@
 use std::collections::HashSet;
+// use std::slice::range;
 
 fn long_add(v: Vec<usize>, w: Vec<usize>) -> Vec<usize> {
     let (mut i, mut j, mut k): (usize, usize, usize) = (0, 0, 0);
     let (vl, wl) = (v.len(), w.len());
     let mut done: bool = false;
 
-    let l: usize = maxu(vl, wl);
+    let l: usize = vl.max(wl);
 
     let mut result: Vec<usize> = vec![0; l];
 
@@ -49,22 +50,6 @@ fn long_add(v: Vec<usize>, w: Vec<usize>) -> Vec<usize> {
     }
 
     result
-}
-
-fn maxi(a: i32, b: i32) -> i32 {
-    if a >= b {
-        a
-    } else {
-        b
-    }
-}
-
-fn maxu(a: usize, b: usize) -> usize {
-    if a >= b {
-        a
-    } else {
-        b
-    }
 }
 
 pub fn max_length_dp(arr: Vec<String>) -> i32 {
@@ -129,43 +114,6 @@ fn count(a: &str, b: &str) -> usize {
 }
 
 
-fn partioned_sums(row: &Vec<i32>, a: usize, b: usize, c: usize) -> (i32, i32) {
-    let (mut sum1, mut sum2): (i32, i32) = (0, 0);
-    // let (mut temp1, mut temp2): (usize, usize) = (j, b2);
-    let mut temp: usize = a;
-
-    while temp < b && row[temp] > 0 {
-        sum1 += row[temp];
-        temp += 1;
-    }
-
-    if row[temp] > 0 {
-        sum1 += row[temp];
-    }
-
-    temp = b;
-    while temp < c && row[temp] > 0 {
-        sum2 += row[temp];
-        temp += 1;
-    }
-
-    if row[temp] > 0 {
-        sum2 += row[temp];
-    }
-
-    (sum1, sum2)
-}
-
-fn dist(a: usize, b: usize) -> usize {
-    let mut c: usize = 0;
-    let mut d: usize = a;
-    while d < b {
-        c += 1;
-        d += 1;
-    }
-    return c
-}
-
 /*
 In a gold mine grid of size m x n, each cell in this mine has an integer representing the amount of gold
 in that cell, 0 if it is empty.
@@ -179,180 +127,237 @@ Never visit a cell with 0 gold.
 You can start and stop collecting gold from any position in the grid that has some gold.
 */
 
+pub fn gold_helper(grid: &Vec<Vec<i32>>, nodes: Vec<(usize, usize)>, current_node: (usize, usize), mut path: Vec<(usize, usize)>) -> Vec<(usize, usize)> {
+    if nodes.is_empty() {
+        return path;
+    }
+
+    let mut potentials: Vec<(usize, usize)> = nodes.clone();
+    potentials.retain(|&node|
+        (current_node.0 == node.0 && (current_node.1 + 1 == node.1 || node.1 + 1 == current_node.1)) ||
+        ((current_node.0 + 1 == node.0 || node.0 + 1 == current_node.0) && current_node.1 == node.1)
+    );
+
+    if !potentials.is_empty() {
+        let mut max_paths: Vec<Vec<(usize, usize)>> = Vec::new();
+        for node in potentials {
+            let new_path: Vec<(usize, usize)> = Vec::from([node]);
+            let mut copy_nodes = nodes.clone();
+            copy_nodes.retain(|(a, b)| !(a == &node.0 && b == &node.1));
+            max_paths.push(gold_helper(grid, copy_nodes, node, new_path));
+        }
+
+        if !max_paths.is_empty() {
+            let mut max_gold = 0;
+            let mut max_path_index = 0;
+            for (index, p) in max_paths.clone().iter().enumerate() {
+                let sum = p.iter()
+                .map(|(i, j)| grid[*i][*j])
+                .reduce(|sum, value|
+                    sum + value
+                ).unwrap();
+
+                if sum > max_gold {
+                    max_gold = sum;
+                    max_path_index = index;
+                }
+            }
+            path.append(&mut max_paths.remove(max_path_index));
+        }
+    }
+    return path;
+}
+
+
 pub fn get_maximum_gold(grid: Vec<Vec<i32>>) -> i32 {
     if grid.is_empty() {
         return  0
     }
 
-    let (mut i, mut j, mut k, mut i_1, mut j_1, mut k_1, mut w):
-        (usize, usize, usize, usize, usize, usize, i32) = (0, 0, 0, 0, 0, 0, 0);
-    let (m, n): (usize, usize) = (grid.len(), grid[j].len());
-    //                        start pos     end pos     
-    //                        (x1, y1)      (x2, y2)    amount of gold in the path
-    let mut stack: Vec<Vec<(usize, usize, usize, usize, i32)>> = vec![Vec::new(); m];
-
-    let mut max_gold: i32 = 0;
-
-    while i < m {
-        while j < n {
-            k_1 = j_1;
-            k = j;
-            w = 0;
-            while k < n && grid[i][k] > 0 {
-                w += grid[i][k];
-                k_1 = k;
-                k += 1;
+    
+    let col = grid.len();
+    let (mut i, mut j) = (0, 0);
+    let mut paths: Vec<(usize, usize)> = Vec::new();
+    while i < col {
+        while j < grid[i].len() {
+            if grid[i][j] > 0 {
+                paths.push((i, j));
             }
-
-            if max_gold < w {
-                max_gold = w;
-            }
-
-            if w > 0 {
-                println!("Current Path {:?}", (i, j, i, k_1, w));
-                if i == i_1 {
-                    stack[i].push((i, j, i, k_1, w));
-                }
-                if i_1 < i {
-                    let (mut x1, mut y1, mut x2, mut y2, mut tot) = (i, j, i, k_1, w);
-                    let stack_len: usize = stack[i_1].len();
-                    let mut stack_index: usize = 0;
-                    while stack_index < stack_len {
-                        let (a1, b1, a2, b2, t) = stack[i_1][stack_index];
-                        println!("comparing {:?}", (a1, b1, a2, b2, t));
-                        stack_index += 1;
-
-                        //   a    b
-                        // c    d
-                        if b1 < y1 && b2 < y2 {
-
-                        } else if b1 < y1 && b2 == y2 {
-                            
-                        } else if b1 < y1 && b2 > y2 {
-                            //    y1    y2
-                            // b1          b2
-                            let d: usize = dist(y1, y2);
-                            if d == 0 || d^1 < d {
-                                let mut left: i32 = 0;
-                                let mut right: i32 = 0;
-                                let mut si: usize = 0;
-                                while si < i_1 {
-                                    let sil = stack[si].len();
-                                    let mut si_i: usize = 0;
-                                    while si_i < sil {
-                                        if stack[si][si_i].1 == b1 {
-                                            left = stack[si][si_i].4;
-                                        } else if stack[si][si_i].3 == b2 {
-                                            right = stack[si][si_i].4;
-                                        }
-                                        si_i += 1;
-                                    }
-                                    si += 1;
-                                }
-                                left += partioned_sums(&grid[i_1], b1, b2, b2).0;
-                                right += partioned_sums(&grid[i_1], y1, b2, b2).0;
-                            } else {
-                                tot += t;
-                            }
-                            println!("updated path {:?}", (x1, y1, x2, y2, tot));
-                        } else if b1 == y1 && b2 == y2 {
-                            x1 = a1;
-                            y1 = b1;
-                            tot += t;
-                            println!("updated path {:?}", (x1, y1, x2, y2, tot));
-                        } else if b1 == y1 && b2 > y2 {
-                            let d: usize = dist(y1, y2);
-                            if d == 0 || d^1 < d {
-                                let right = partioned_sums(&grid[i_1], y1, b2, b2).0 - grid[i_1][y1];
-                                if a1 < i_1 && tot - right - grid[i_1][y1] > right {
-                                    x1 = a1;
-                                    y1 = b1;
-                                    tot = t - right + tot;
-                                } else {
-                                    x2 = a2;
-                                    y2 = b2;
-                                    tot = right + grid[i_1][y1] + tot;
-                                }
-                            } else {
-                                x1 = a1;
-                                y1 = b1;
-                                tot += t;
-                            }
-                            println!("updated path {:?}", (x1, y1, x2, y2, tot));
-                        } else if b1 == y1 && b2 < y2 {
-                            x1 = a1;
-                            y1 = b1;
-                            tot += t;
-                            println!("updated path {:?}", (x1, y1, x2, y2, tot));
-                        } else if b1 > y1 && b2 < y2 {
-                            let d: usize = dist(b1, b2);
-                            if d == 0 || d^1 < d {
-                                let left = partioned_sums(&grid[i], y1, b1, b1).0 - grid[i][b1];
-                                let right = partioned_sums(&grid[i], b2, y2, y2).0 - grid[i][b2];
-                                if left < right {
-                                    // right
-                                    //    b1   b2
-                                    // j          k_1
-                                    x1 = a1;
-                                    y1 = b1;
-                                    tot = tot - left + t;
-                                } else {
-                                    // left
-                                    //   b1   b2
-                                    // j         k_1
-                                    x2 = a2;
-                                    y2 = b2;
-                                    tot = tot - right + t;
-                                }
-                            } else {
-                                tot += t;
-                            }
-                            println!("updated path {:?}", (x1, y1, x2, y2, tot));
-                        } else if b1 > y1 && b2 == y2 {
-                            if a1 < i_1 {
-                                x2 = a1;
-                                y2 = b1;
-                                tot += t;
-                            } else {
-                                x2 = a2;
-                                y2 = b2;
-                                tot += t;
-                            }
-                            println!("updated path {:?}", (x1, y1, x2, y2, tot));
-                        } else if b1 > y1 && b2 > y2 {
-                        } 
-                    }
-
-                    let path: (usize, usize, usize, usize, i32) = (x1, y1, x2, y2, tot);
-                    if max_gold < path.4 {
-                        max_gold = path.4;
-                    }
-                    println!("6inserting {:?}", path);
-                    stack[i].push(path);
-                }
-            }
-
-            if k == j {
-                j_1 = j;
-                j += 1;
-            } else {
-                j = k;
-            }
+            j += 1;
         }
-
-        println!("-------");
-        i_1 = i;
         i += 1;
         j = 0;
     }
 
+
+    let mut max_paths: Vec<Vec<(usize, usize)>> = Vec::new();
+    let copy_path = paths.clone();
+    for node in paths {
+        let mut nodes = copy_path.clone();
+        nodes.retain(|(a, b)| !(a == &node.0 && b == &node.1));
+        max_paths.push(gold_helper(&grid, nodes, node, Vec::from([node])));
+    }
+
+    println!("{:?}", max_paths);
+    let mut max_gold = 0;
+    for path in max_paths {
+        let mut sum = 0;
+        for (i, j) in path {
+            sum += grid[i][j];
+        }
+        if sum > max_gold {
+            max_gold = sum;
+        }
+    }
     max_gold
+}
+
+
+pub fn longest_valid_parentheses(s: String) -> i32 {
+    if s.is_empty() {
+        return 0
+    }
+
+    let mut cleared = vec![];
+    let mut stack = vec![];
+    for (i, p) in s.char_indices() {
+        cleared.push(false);
+        if p == '(' {
+            stack.push(i);
+        } else if !stack.is_empty() {
+            cleared[i] = true;
+            cleared[stack.pop().unwrap()] = cleared[i];
+        }
+    }
+
+    cleared.split(|item| *item == false).max().unwrap().len() as i32
+    // 0
 }
 
 
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
+}
+
+pub fn median_helper(mut nums: Vec<i32>, nums1: &[i32], nums2: &[i32], i: usize, j: usize, l1: usize, l2: usize, m: usize, n: usize) -> Vec<i32>{
+    println!("{l1}, {i}, {l2}, {j}");
+    if nums1[i] > nums2[j] {
+        if nums1[l1] > nums2[j] {
+            // nums = [&nums, &nums2[l2..j + 1], &nums1[l1..i + 1]].concat();
+            if l2 == j {
+                nums = [&nums, &nums1[l1..i + 1]].concat();
+            } else {
+                nums = [&nums, &nums2[l2..j + 1], &nums1[l1..i + 1]].concat();
+            }
+            return nums;
+        }
+
+        let mut temp_i = mid(i);
+        let mut temp_j = mid(j);
+        nums = median_helper(nums, nums1, nums2, temp_i, temp_j, l1, l2, m, n);
+        temp_i += 1;
+        temp_j += 1;
+        if temp_i < i && temp_j < j {
+            nums = median_helper(nums, nums1, nums2, i, j, temp_i, temp_j, m, n);
+        }
+    }
+
+    if nums1[i] < nums2[j] {
+        if nums1[i] <= nums2[l2] {
+            nums = [&nums, &nums1[l1..i + 1], &nums2[l2..j + 1]].concat();
+            // if l1 == i && l2 < j {
+            //     nums = [&nums, &nums2[l2..j + 1]].concat();
+            // } else if l1 + 1 <= m || l2 + 1 <= n {
+            //     nums = [&nums, &nums1[l1..i + 1], &nums2[l2..j + 1]].concat();
+            // }
+            return nums;
+        }
+
+        let mut temp_i = mid(i);
+        let mut temp_j = mid(j);
+        nums = median_helper(nums, nums1, nums2, temp_i, temp_j, l1, l2, m, n);
+        temp_i += 1;
+        temp_j += 1;
+        if temp_i < i && temp_j < j {
+            nums = median_helper(nums, nums1, nums2, i, j, temp_i, temp_j, m, n);
+        }
+    }
+
+    if nums1[i] == nums2[j] {
+        if (l1 == i) & (l2 == j) {
+            nums.push(nums1[i]);
+            nums.push(nums2[j]);
+            return nums
+        } else if (l1 < i) & (l2 < j) {
+            let mut temp_i = i;
+            let mut temp_j = j;
+            temp_i -= 1;
+            temp_j -= 1;
+            if temp_i > l1 && temp_j > l2 {
+                nums = median_helper(nums, nums1, nums2, temp_i, temp_j, l1, l2, m, n);
+            } else if temp_i == l1 && temp_j == l2 {
+
+            } else if temp_i == l1  {
+                nums = [&nums, &nums2[l2..temp_j + 1]].concat();
+            } else {
+                nums = [&nums, &nums1[l1..temp_i + 1]].concat();
+            }
+
+            nums.push(nums1[i]);
+            nums.push(nums2[j]);
+        } else if l1 == i {
+            nums = [&nums, &nums2[l2..j + 1]].concat();
+            return nums
+        } else {
+            nums = [&nums, &nums1[l1..i + 1]].concat();
+            return nums
+        }
+    }
+    
+    nums
+}
+
+pub fn mid(x: usize) -> usize {
+    x/2
+}
+
+pub fn find_median_sorted_arrays(nums1: Vec<i32>, nums2: Vec<i32>) -> f64 {
+    let (m, n) = (nums1.len(), nums2.len());
+    let mut i = mid(m);
+    let mut j = mid(n);
+    let mut nums = vec![];
+    
+    if !nums1.is_empty() & !nums2.is_empty() {
+        nums = median_helper(nums, &nums1[0..i+1], &nums2[0..j+1], i, j, 0, 0, m, n);
+        println!("{:?}", nums);
+        if i + 1 < m {
+            i += 1;
+        }
+        if j + 1 < n {
+            j += 1;
+        }
+        println!();
+        nums = median_helper(nums, &nums1, &nums2, m - 1, n - 1, i, j, m, n);
+        println!("{:?}", nums);
+
+    } else if nums1.is_empty() & nums2.is_empty() {
+        return 0.0;
+    } else if nums1.is_empty() {
+        nums = nums2;
+    } else {
+        nums = nums1;
+    }
+
+    
+    
+
+    let mid = mid(m + n - 1);
+    if !(m + n).is_power_of_two() || mid == 0 {
+        nums[mid] as f64
+    } else {
+        ((nums[mid] + nums[mid + 1]) as f64) / 2.0
+    }
 }
 
 
@@ -367,30 +372,62 @@ mod tests {
     }
 
     #[test]
+    fn median_test() {
+        let cases = vec![
+            (Vec::from([1,3]), Vec::from([2]), 2.0),
+            (Vec::from([0,0]), Vec::from([0, 0]), 0.0),
+            (Vec::from([1,3]), Vec::from([2, 7]), 2.5),
+            (Vec::from([]), Vec::from([1]), 1.0),
+            (Vec::from([0,0,0,0,0]), Vec::from([-1,0,0,0,0,0,1]), 0.0),
+            (Vec::from([1,2]), Vec::from([3,4]), 2.5),
+            (Vec::from([]), Vec::from([2, 3]), 2.5),
+        ];
+        for case in cases {
+            println!("{:?}", case);
+            assert_eq!(case.2, find_median_sorted_arrays(case.0, case.1));
+        }
+    }
+
+    #[test]
+    fn paren_test() {
+        // let case = ")(".to_string();
+        let mut cases = [")(", ")()())()()(", ")()())", ")(((((()())()()))()(()))(", "))))((()((", "()()))))()()(", "(()))())(", ")()))()(", ")()))(", "((())))))()", "())()(", ")(())))(())())", ")))))()())()", "))))())()()(()", "(()", "()()", "(()()", "()(()(((",
+        "(()()(()(()))()((()))((()(()())()(()))())))()(()()))())))))))()()()()))(((()())((()()(((())))()(()()(())((()))))))(()(()))(((()())()))(()))((((()(()()()())()()(()))(()()(())()((()()())))(())()())()("];
+        let results = cases.iter_mut().map(|s| longest_valid_parentheses(s.to_string()));
+        let answers = [0, 4, 4, 22, 2, 4, 4, 2, 2, 6, 2, 6, 4, 4, 2, 4, 4, 2, 68];
+        for result in results.enumerate() {
+            assert_eq!(result.1, answers[result.0]);
+        }
+        // let result = longest_valid_parentheses(case);
+        // assert_eq!(result,2);
+        // assert_eq!(result,4);
+    }
+
+    #[test]
     fn gold_test() {
         // let result1 = get_maximum_gold(Vec::from([
         //     Vec::from([0,6,0]),
         //     Vec::from([5,8,7]),
         //     Vec::from([0,9,0])
         //     ]));
-        let result = get_maximum_gold(
-            [
-                [1,0,7],
-                [2,0,6],
-                [3,4,5],
-                [0,3,0],
-                [9,0,20]
-            ].iter_mut().map(|x| x.to_vec()).collect::<Vec<Vec<i32>>>());
-        // let result = get_maximum_gold([
-        //     [1,0,7,0,0,0],
-        //     [2,0,6,0,1,0],
-        //     [3,5,6,7,4,2],
-        //     [4,3,1,0,2,0],
-        //     [3,0,5,0,20,0]
-        // ].iter_mut().map(|x| x.to_vec()).collect::<Vec<Vec<i32>>>());
-        // assert_eq!(result, 60);
+        // let result = get_maximum_gold(
+        //     [
+        //         [1,0,7],
+        //         [2,0,6],
+        //         [3,4,5],
+        //         [0,3,0],
+        //         [9,0,20]
+        //     ].iter_mut().map(|x| x.to_vec()).collect::<Vec<Vec<i32>>>());
+        let result = get_maximum_gold([
+            [1,0,7,0,0,0],
+            [2,0,6,0,1,0],
+            [3,5,6,7,4,2],
+            [4,3,1,0,2,0],
+            [3,0,5,0,20,0]
+        ].iter_mut().map(|x| x.to_vec()).collect::<Vec<Vec<i32>>>());
+        assert_eq!(result, 60);
         // assert_eq!(result1, 24);
-        assert_eq!(result, 218);
+        // assert_eq!(result, 28);
     }
 
     #[test]
