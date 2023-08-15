@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, ops::Range};
 // use std::slice::range;
 
 fn long_add(v: Vec<usize>, w: Vec<usize>) -> Vec<usize> {
@@ -240,130 +240,95 @@ pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
 
-pub fn median_helper(mut nums: Vec<i32>, nums1: &[i32], nums2: &[i32], i: usize, j: usize, l1: usize, l2: usize, m: usize, n: usize) -> Vec<i32>{
-    println!("{l1}, {i}, {l2}, {j}");
-    if nums1[i] > nums2[j] {
-        if nums1[l1] > nums2[j] {
-            // nums = [&nums, &nums2[l2..j + 1], &nums1[l1..i + 1]].concat();
-            if l2 == j {
-                nums = [&nums, &nums1[l1..i + 1]].concat();
-            } else {
-                nums = [&nums, &nums2[l2..j + 1], &nums1[l1..i + 1]].concat();
-            }
-            return nums;
-        }
 
-        let mut temp_i = mid(i);
-        let mut temp_j = mid(j);
-        nums = median_helper(nums, nums1, nums2, temp_i, temp_j, l1, l2, m, n);
-        temp_i += 1;
-        temp_j += 1;
-        if temp_i < i && temp_j < j {
-            nums = median_helper(nums, nums1, nums2, i, j, temp_i, temp_j, m, n);
-        }
-    }
-
-    if nums1[i] < nums2[j] {
-        if nums1[i] <= nums2[l2] {
-            nums = [&nums, &nums1[l1..i + 1], &nums2[l2..j + 1]].concat();
-            // if l1 == i && l2 < j {
-            //     nums = [&nums, &nums2[l2..j + 1]].concat();
-            // } else if l1 + 1 <= m || l2 + 1 <= n {
-            //     nums = [&nums, &nums1[l1..i + 1], &nums2[l2..j + 1]].concat();
-            // }
-            return nums;
-        }
-
-        let mut temp_i = mid(i);
-        let mut temp_j = mid(j);
-        nums = median_helper(nums, nums1, nums2, temp_i, temp_j, l1, l2, m, n);
-        temp_i += 1;
-        temp_j += 1;
-        if temp_i < i && temp_j < j {
-            nums = median_helper(nums, nums1, nums2, i, j, temp_i, temp_j, m, n);
-        }
-    }
-
-    if nums1[i] == nums2[j] {
-        if (l1 == i) & (l2 == j) {
-            nums.push(nums1[i]);
-            nums.push(nums2[j]);
-            return nums
-        } else if (l1 < i) & (l2 < j) {
-            let mut temp_i = i;
-            let mut temp_j = j;
-            temp_i -= 1;
-            temp_j -= 1;
-            if temp_i > l1 && temp_j > l2 {
-                nums = median_helper(nums, nums1, nums2, temp_i, temp_j, l1, l2, m, n);
-            } else if temp_i == l1 && temp_j == l2 {
-
-            } else if temp_i == l1  {
-                nums = [&nums, &nums2[l2..temp_j + 1]].concat();
-            } else {
-                nums = [&nums, &nums1[l1..temp_i + 1]].concat();
-            }
-
-            nums.push(nums1[i]);
-            nums.push(nums2[j]);
-        } else if l1 == i {
-            nums = [&nums, &nums2[l2..j + 1]].concat();
-            return nums
-        } else {
-            nums = [&nums, &nums1[l1..i + 1]].concat();
-            return nums
-        }
-    }
-    
-    nums
-}
 
 pub fn mid(x: usize) -> usize {
     x/2
 }
 
+pub fn mid_range(x: usize) -> Range<usize> {
+    let m = mid(x);
+    let m1 = m+1;
+    if m > 0 {
+        (m - 1*((x+1) & 1))..m1
+    } else {
+        m..m1
+    }
+}
+
+// works but not optimal
+pub fn median_splitter(nums1: &[i32], nums2: &[i32]) -> Vec<i32> {
+    let (n, m) = (nums1.len(), nums2.len());
+    println!("{:?}\n{:?}\n\n", nums1, nums2);
+    if n == 0 {
+        [nums2].concat()
+    } else if m == 0 {
+        [nums1].concat()
+    } else if nums1[0] >= nums2[m - 1] {
+        [nums2, nums1].concat()
+    } else if nums1[n - 1] > nums2[0] {
+        let mut true_mid = mid(n).min(mid(m));
+        if true_mid < 1 || true_mid > 1 { true_mid += 1;}
+
+        if nums1[..true_mid][true_mid - 1] <= nums2[..true_mid][0] {
+            return [&nums1[..true_mid], &median_splitter(&nums1[true_mid..], nums2)].concat();
+        }
+        println!("------------L");
+        let left = median_splitter(&nums1[..true_mid], &nums2[..true_mid]);
+        println!("------------R");
+        let right = median_splitter(&nums1[true_mid..], &nums2[true_mid..]);
+        median_splitter(&left, &right)
+    } else {
+        [nums1, nums2].concat()
+    }
+}
+
 pub fn find_median_sorted_arrays(nums1: Vec<i32>, nums2: Vec<i32>) -> f64 {
-    let (m, n) = (nums1.len(), nums2.len());
-    let mut i = mid(m);
-    let mut j = mid(n);
-    let mut nums = vec![];
-    
-    if !nums1.is_empty() & !nums2.is_empty() {
-        nums = median_helper(nums, &nums1[0..i+1], &nums2[0..j+1], i, j, 0, 0, m, n);
-        println!("{:?}", nums);
-        if i + 1 < m {
-            i += 1;
-        }
-        if j + 1 < n {
-            j += 1;
-        }
-        println!();
-        nums = median_helper(nums, &nums1, &nums2, m - 1, n - 1, i, j, m, n);
-        println!("{:?}", nums);
-
-    } else if nums1.is_empty() & nums2.is_empty() {
-        return 0.0;
-    } else if nums1.is_empty() {
-        nums = nums2;
-    } else {
-        nums = nums1;
-    }
-
-    
-    
-
-    let mid = mid(m + n - 1);
-    if !(m + n).is_power_of_two() || mid == 0 {
-        nums[mid] as f64
-    } else {
-        ((nums[mid] + nums[mid + 1]) as f64) / 2.0
-    }
+    let r = mid_range(nums1.len() + nums2.len());
+    let l = r.len() as f64;
+    median_splitter(&nums1, &nums2)[r].iter().sum::<i32>() as f64/l
 }
 
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn mid_range_test() {
+        let cases = vec![
+            (0, 0..1),
+            (1, 0..1),
+            (2, 0..2),
+            (3, 1..2),
+            (4, 1..3),
+            (5, 2..3),
+            (6, 2..4),
+        ];
+        for (query,expected) in cases {
+            println!("{:?}", query);
+            let result = mid_range(query);
+            println!("{:?}", result);
+            assert_eq!(result, expected);
+        }
+    }
+
+    #[test]
+    fn mid_test() {
+        let cases = vec![
+            (0, 0),
+            (1, 0),
+            (2, 1),
+            (3, 1),
+            (4, 2),
+            (5, 2),
+            (6, 3),
+        ];
+        for (query,expected) in cases {
+            println!("{:?}", query);
+            assert_eq!(mid(query), expected);
+        }
+    }
 
     #[test]
     fn it_works() {
@@ -381,6 +346,18 @@ mod tests {
             (Vec::from([0,0,0,0,0]), Vec::from([-1,0,0,0,0,0,1]), 0.0),
             (Vec::from([1,2]), Vec::from([3,4]), 2.5),
             (Vec::from([]), Vec::from([2, 3]), 2.5),
+            (Vec::from([3]), Vec::from([1, 2]), 2.0),
+            (Vec::from([2]), Vec::from([1,3]), 2.0),
+            (Vec::from([1,2,3,5]), Vec::from([4]), 3.0),
+            (Vec::from([1,3,4,5]), Vec::from([2]), 3.0),
+            (Vec::from([1,3,4,5,6]), Vec::from([2]), 3.5),
+            (Vec::from([2,3,4,5,6]), Vec::from([1]), 3.5),
+            (Vec::from([2,4,5,6]), Vec::from([1,3]), 3.5),
+            (Vec::from([4]), Vec::from([1,2,3,5,6]), 3.5),
+            (Vec::from([1,2,3,5]), Vec::from([4,6,7,8]), 4.5),
+            (Vec::from([1,2,3,5]), Vec::from([4,6,7,8,9,10]), 5.5),
+
+            (Vec::from([1,1,1,1,1,1,1,1,1,1,4,4]), Vec::from([1,3,4,4,4,4,4,4,4,4,4]), 3.0),
         ];
         for case in cases {
             println!("{:?}", case);
