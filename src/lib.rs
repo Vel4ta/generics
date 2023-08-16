@@ -243,7 +243,11 @@ pub fn add(left: usize, right: usize) -> usize {
 
 
 pub fn mid(x: usize) -> usize {
-    x/2
+    if x <= 2 {
+        1
+    } else {
+        x/2 + 1
+    }
 }
 
 pub fn mid_range(x: usize) -> Range<usize> {
@@ -259,32 +263,31 @@ pub fn mid_range(x: usize) -> Range<usize> {
 // works but not optimal
 pub fn median_splitter(nums1: &[i32], nums2: &[i32]) -> Vec<i32> {
     let (n, m) = (nums1.len(), nums2.len());
+    let (mn, mm) = (mid(n), mid(m));
     println!("{:?}\n{:?}\n\n", nums1, nums2);
-    if n == 0 {
-        [nums2].concat()
-    } else if m == 0 {
-        [nums1].concat()
+    if n == 0 || m == 0 || nums1[n - 1] <= nums2[0] {
+        [nums1, nums2].concat()
     } else if nums1[0] >= nums2[m - 1] {
         [nums2, nums1].concat()
-    } else if nums1[n - 1] > nums2[0] {
-        let mut true_mid = mid(n).min(mid(m));
-        if true_mid < 1 || true_mid > 1 { true_mid += 1;}
-
-        if nums1[..true_mid][true_mid - 1] <= nums2[..true_mid][0] {
-            return [&nums1[..true_mid], &median_splitter(&nums1[true_mid..], nums2)].concat();
-        }
-        println!("------------L");
-        let left = median_splitter(&nums1[..true_mid], &nums2[..true_mid]);
-        println!("------------R");
-        let right = median_splitter(&nums1[true_mid..], &nums2[true_mid..]);
-        median_splitter(&left, &right)
+    } else if nums1[mn-1] <= nums2[0] {
+        [&nums1[..mn], &median_splitter(&nums1[mn..], nums2)].concat()
+    } else if nums1[0] >= nums2[mm-1] {
+        [&nums2[..mm], &median_splitter(nums1, &nums2[mm..])].concat()
     } else {
-        [nums1, nums2].concat()
+        let left = median_splitter(&nums1[..mn], &nums2[..mm]);
+        let right = median_splitter(&nums1[mn..], &nums2[mm..]);
+        median_splitter(&left, &right)
     }
 }
 
 pub fn find_median_sorted_arrays(nums1: Vec<i32>, nums2: Vec<i32>) -> f64 {
-    let r = mid_range(nums1.len() + nums2.len());
+    let l = nums1.len() + nums2.len();
+    let m = l/2;
+    let r = if m > 0 {
+        (m - 1*((l+1) & 1))..(m+1)
+    } else {
+        m..(m+1)
+    };
     let l = r.len() as f64;
     median_splitter(&nums1, &nums2)[r].iter().sum::<i32>() as f64/l
 }
@@ -356,8 +359,15 @@ mod tests {
             (Vec::from([4]), Vec::from([1,2,3,5,6]), 3.5),
             (Vec::from([1,2,3,5]), Vec::from([4,6,7,8]), 4.5),
             (Vec::from([1,2,3,5]), Vec::from([4,6,7,8,9,10]), 5.5),
-
             (Vec::from([1,1,1,1,1,1,1,1,1,1,4,4]), Vec::from([1,3,4,4,4,4,4,4,4,4,4]), 3.0),
+
+            (Vec::from([1,1,1,2,4]), Vec::from([1,2,3,5,6]), 2.0),
+
+            (Vec::from([1,2,4]), Vec::from([1,2,4]), 2.0),
+
+            (Vec::from([5]), Vec::from([1,2,3,4,6]), 3.5),
+
+            (Vec::from([1,2,3,4,6]),Vec::from([5]), 3.5),
         ];
         for case in cases {
             println!("{:?}", case);
