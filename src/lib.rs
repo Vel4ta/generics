@@ -264,7 +264,6 @@ pub fn mid_range(x: usize) -> Range<usize> {
 pub fn median_splitter(nums1: &[i32], nums2: &[i32]) -> Vec<i32> {
     let (n, m) = (nums1.len(), nums2.len());
     let (mn, mm) = (mid(n), mid(m));
-    println!("{:?}\n{:?}\n\n", nums1, nums2);
     if n == 0 || m == 0 || nums1[n - 1] <= nums2[0] {
         [nums1, nums2].concat()
     } else if nums1[0] >= nums2[m - 1] {
