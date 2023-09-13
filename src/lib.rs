@@ -235,6 +235,52 @@ pub fn longest_valid_parentheses(s: String) -> i32 {
 }
 
 
+pub fn length_of_longest_substring(s: String) -> i32 {
+    let s = s.as_bytes();
+    let l = s.len();
+    if l < 2 {
+        return l as i32;
+    }
+
+    let (mut max_len, mut start) = (0, 0);
+    let mut previous = vec![0; l];
+    for i in 1..l {
+        let (mut max, mut prev) = (0, i);
+        let mut local = vec![false; i];
+        for j in start..i {
+            local[j] = s[j] != s[i];
+            if local[j] {
+                let (mut t, mut w) = (j, 1);
+
+                while previous[t] != t && local[previous[t]] {
+                    w += 1;
+                    t = previous[t];
+                }
+
+                if max <= w {
+                    max = w;
+                    prev = j;
+                }
+            } else {
+                start = j + 1;
+                prev = start;
+                previous[start] = start;
+                max = 0;
+            }
+        }
+
+        max += 1;
+
+        if max_len < max {
+            max_len = max;
+        }
+
+        previous[i] = prev;
+    }
+
+    max_len as i32
+}
+
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
