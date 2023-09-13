@@ -242,41 +242,29 @@ pub fn length_of_longest_substring(s: String) -> i32 {
         return l as i32;
     }
 
-    let (mut max_len, mut start) = (0, 0);
-    let mut previous = vec![0; l];
-    for i in 1..l {
-        let (mut max, mut prev) = (0, i);
-        let mut local = vec![false; i];
-        for j in start..i {
-            local[j] = s[j] != s[i];
-            if local[j] {
-                let (mut t, mut w) = (j, 1);
-
-                while previous[t] != t && local[previous[t]] {
-                    w += 1;
-                    t = previous[t];
-                }
-
-                if max <= w {
-                    max = w;
-                    prev = j;
-                }
-            } else {
-                start = j + 1;
-                prev = start;
-                previous[start] = start;
-                max = 0;
+    let (mut max_len, mut bag_start, mut bag_end, mut count) = (0, 0, 1, 0);
+    let mut i;
+    while bag_end < l {
+        i = bag_start;
+        while i < bag_end {
+            if s[i] == s[bag_end] {
+                bag_start = i + 1;
+                break;
             }
+            i += 1;
+            count += 1;
         }
 
-        max += 1;
+        count += 1;
 
-        if max_len < max {
-            max_len = max;
+        if count > max_len {
+            max_len = count;
         }
 
-        previous[i] = prev;
+        count = 0;
+        bag_end += 1;
     }
+    
 
     max_len as i32
 }
