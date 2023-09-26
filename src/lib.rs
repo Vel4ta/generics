@@ -269,6 +269,186 @@ pub fn length_of_longest_substring(s: String) -> i32 {
     max_len as i32
 }
 
+pub fn tree_height(tree: &[(usize, usize, usize, usize, usize, usize)], node_index: usize, child_index: usize) -> usize {
+    if node_index == child_index {
+        return 0
+    }
+
+    return tree[child_index].5
+}
+
+pub fn left_rotate(tree: &mut[(usize, usize, usize, usize, usize, usize)], index: usize) -> usize {
+    // println!("before left {index} {:?}", tree);
+    let child = tree[index].3;
+    let grandchild_l = tree[child].2;
+
+    tree[index].3 = if grandchild_l == child {
+        index
+    } else {
+        tree[grandchild_l].0 = index;
+        grandchild_l
+    };
+
+    let parent = tree[index].0;
+    tree[index].0 = child;
+    if parent != index {
+        if tree[parent].2 == index {
+            tree[parent].2 = child;
+        } else {
+            tree[parent].3 = child;
+        }
+    }
+
+    tree[child].0 = if parent == index {
+        child
+    } else  {
+        parent
+    };
+    tree[child].2 = index;
+
+    tree[index].5 = tree_height(tree, index, tree[index].2).max(tree_height(tree, index, tree[index].3)) + 1;
+    tree[child].5 = tree_height(tree, child, tree[child].2).max(tree_height(tree, child, tree[child].3)) + 1;
+
+    // println!("after left {index} {:?}", tree);
+    return child;
+}
+
+pub fn right_rotate(tree: &mut[(usize, usize, usize, usize, usize, usize)], index: usize) -> usize {
+    // println!("before right {index} {:?}", tree);
+    let child = tree[index].2;
+    let grandchild_r = tree[child].3;
+
+    tree[index].2 = if grandchild_r == child {
+        index
+    } else {
+        tree[grandchild_r].0 = index;
+        grandchild_r
+    };
+
+    let parent = tree[index].0;
+    tree[index].0 = child;
+
+    if parent != index {
+        if tree[parent].2 == index {
+            tree[parent].2 = child;
+        } else {
+            tree[parent].3 = child;
+        }
+    }
+
+    tree[child].0 = if parent == index {
+        child
+    } else  {
+        parent
+    };
+    tree[child].3 = index;
+
+    tree[index].5 = tree_height(tree, index, tree[index].2).max(tree_height(tree, index, tree[index].3)) + 1;
+    tree[child].5 = tree_height(tree, child, tree[child].2).max(tree_height(tree, child, tree[child].3)) + 1;
+
+    // println!("after right {index} {:?}", tree);
+    return child;
+}
+
+pub fn tree_test(s: String) {
+    println!("{s}");
+    let s = s.as_bytes();
+    let l = s.len();
+    // if l < 2 {
+    //     return l as i32;
+    // }
+
+    //                 parent, index, left, right, index in s, height
+    let mut tree: Vec<(usize, usize, usize, usize, usize, usize)> = Vec::new();
+    let (mut max, mut count, mut start, mut t_root) = (1, 1, 0, 0);
+    let mut node;
+
+    tree.push((start, start, start, start, start, 1));
+
+    for i in 1..l {
+        node = tree[t_root];
+        while node.2 != node.3 {
+            if s[i] < s[node.4] && node.2 != node.1 {
+                node = tree[node.2]
+            } else if s[i] > s[node.4] && node.3 != node.1 {
+                node = tree[node.3];
+            } else {
+                break;
+            }
+        }
+
+        let tl = tree.len();
+        if s[i] < s[node.4] {
+            tree[node.1].2 = tl;
+            tree.push((node.1, tl, tl, tl, i, 1));
+            count += 1;
+        } else if s[i] > s[node.4] {
+            tree[node.1].3 = tl;
+            tree.push((node.1, tl , tl, tl, i, 1));
+            count += 1;
+        } else if i - node.4 == 1 {
+            t_root = 0;
+            start = i;
+            count = 1;
+            tree = [(t_root, t_root, t_root, t_root, start, 1)].to_vec();
+        } else {
+            count = if node.4 >= start {
+                i - node.4
+            } else {
+                count + 1
+            };
+            tree[node.1].4 = i;
+            if node.4 >= start {
+                start = node.4 + 1;
+            }
+        }
+
+        max = max.max(count);
+
+        if !(tree.len() > tl) {
+            println!("root:{t_root}, max:{max}, count:{count}, start:{start}, i:{i}, s[i]:{:?}\n {:?}", s[i], tree);
+            continue;
+        }
+
+        node = tree[node.1];
+        loop {
+            let left = tree_height(&tree, node.1, node.2);
+            let right = tree_height(&tree, node.1, node.3);
+            tree[node.1].5 = 1 + left.max(right);
+
+            let balance = left.max(right) - left.min(right);
+            let sign = left < right;
+
+            let new_root = if balance > 1 && !sign && s[i] < s[tree[node.2].4] {
+                right_rotate(&mut tree, node.1)
+            } else if balance > 1 && sign && s[i] > s[tree[node.3].4] {
+                left_rotate(&mut tree, node.1)
+            } else if balance > 1 && !sign && s[i] > s[tree[node.2].4] {
+                tree[node.1].2 = left_rotate(&mut tree, node.2);
+                right_rotate(&mut tree, node.1)
+            } else if balance > 1 && sign && s[i] < s[tree[node.3].4] {
+                tree[node.1].3 = right_rotate(&mut tree, node.3);
+                left_rotate(&mut tree, node.1)
+            } else {
+                t_root
+            };
+            
+            if node.0 == node.1 {
+                t_root = new_root;
+                break;
+            }
+
+            node = tree[node.1];
+            node = tree[node.0];
+        }
+
+        println!("root:{t_root}, max:{max}, count:{count}, start:{start}, i:{i}, s[i]:{:?}\n {:?}", s[i], tree);
+    }
+
+    println!("root:{t_root}, max:{max}, count:{count} {:?}", tree);
+    println!("{max}");
+}
+
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
@@ -329,6 +509,28 @@ pub fn find_median_sorted_arrays(nums1: Vec<i32>, nums2: Vec<i32>) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tree_test_tester() {
+        let cases = vec![
+            "abcabba",
+            "pwwkew",
+            "egcq",
+            "ckilbkd",
+            "abcabcbb",
+            "ywjvusw",
+            "asljlj",
+            "vqblqcb",
+            "asjrgapa",
+            "gsqygebs",
+            "wobgrovw",
+            "eeydgwdykpv"
+        ];
+        for case in cases {
+            tree_test(case.to_string());
+        }
+        assert_eq!(true, true);
+    }
 
     #[test]
     fn mid_range_test() {
